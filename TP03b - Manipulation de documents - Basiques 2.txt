@@ -1,0 +1,168 @@
+## Pour afficher toutes les bases de données  :
+show dbs
+
+## Pour sélectionner ou créer la database :
+use your_database_name
+
+## Pour lister toues les collections de la database :
+show collections
+
+## Pour voir toutes les données de la collection "nom_de_la_collection":
+
+db.nom_de_la_collection.find() 
+
+## Ou encore : 
+
+db.nom_de_la_collection.find().pretty()
+
+
+## Pour utiliser la base "Database_de_formation" :
+use Database_de_formation
+
+## Pour voir à quelle base on est connecté : 
+db
+
+## Pour se connecter à la DB admin : 
+use admin
+
+## Pour afficher les collections :
+show collections
+
+## Pour afficher les usrs :
+show users
+
+## Pour renommer une collection :
+db.oldname.renameCollection("newname")
+
+## Pour effacer toute une collection :
+db.contacts.drop()
+
+use Database_de_formation
+## Pour effacer la base dans laquelle on est :
+
+db.dropDatabase()
+
+## Pour insertion  :
+db.contacts.insert({ first: 'Pierre', last: 'Kiroule' })
+
+## Pour sélectionner : 
+db.contacts.find()
+db.contacts.find({ first: 'Pierre' })
+db.contacts.find({ first: 'Pierre', last: 'Kiroule' })
+
+
+#############################################################################################
+## Partie optionnelle : exemples :
+#############################################################################################
+
+## Pour sélectionner les documents dont un array contient la valeur 'Job' :
+db.contacts.find({ tags: 'Job' })
+
+## Pour sélectionner les documents contenant un élément au moins parmi plusieurs :
+db.contacts.find({ tags: { $in: ['Job', 'francais'] } })
+
+## Pour trouver ceux répondant à une combinaison de plusieurs critères : 
+db.contacts.find({ tags: { $all: ['Job', 'francais'] } })
+
+## Pour trouver ceux dont les valeurs sous cette forme d'array correspondent exactement ( y compris l'ordre) :
+db.contacts.find({ tags: ['Job', 'francais'] })
+
+## Pour requêter selon des propriétés d'un sous-document  :
+## Sur l'objet suivant :
+## { nom: "Pierre", agenda: { lundi: "footing", mardi: "piscine", mercredi: "muscu" } }
+## Pour matcher depuis un sous-document (notez bien les guillemets autour de agenda.mardi)
+db.abonnes.find({ 'agenda.mardi': 'piscine' })
+
+## Pour requêter selon une correspondace exacte de sous-document :
+db.abonnes.find({ agenda: { lundi: "footing", mardi: "piscine", mercredi: "muscu" } })
+
+## Pour une condition ou une autre :
+## il faut utiliser $or dans un array dont chaque élément est un objet littéral de la sélection :
+db.abonnes.find({ $or: [{ _id:ObjectId("558d0b395fa02e7e218b4587") }, { _id:ObjectId("558d0b395fa02e7e218b4574") }] })
+
+## Pour récupérer seulement certains champs d'un document :
+db.abonnes.find({}, { _id: 0, fild1: 1, fild2: 0 })
+
+## Pour récupérer un type au choix entre 'supermarché' ou 'restaurant':
+db.magasins.find({ type: { $in: ['supermarché', 'restaurant'] } })
+
+## Pour sélectionner les documents comportant un champ existant particulier :
+db.abonnes.find({ date_de_naissance: { $exists: true } })
+
+## Pour sélectionner les documents dont la valeur est différente de '2000' : 
+db.abonnes.find({ date_de_naissance: { $ne: 2000 } })
+
+## Pour ne récupérer que le sous-document (récupérer le sous-document d'id 'x' dans le document dont l'id est 'z')
+db.abonnes.find({ _id: z, "contacts._id": x }, { "contacts.$._id" : 1 })
+
+## Pour trier le résultat de la sélection :
+## Pour 1 = croissant/alphabétique et -1 = décroissant/alphabétique inversé
+db.abonnes.find().sort({ addedOn: 1 })
+
+
+## Pour mettre à jour : utiliser { multi: true } pour modifier plusieurs documents à la fois
+## L'option { upsert: true } permet de créer le document s'il n'existe pas déjà : 
+db.abonnes.update({ _id: x }, { $set: { "prénom": "Jacques" } })
+
+## Pour update en remplaçant le document par un nouvel objet 
+db.abonnes.update({ _id: 'aa11bb22cc33' }, obj)
+
+## Pour mettre à jour un sous-document d'id 'y' du doc d'id 'x' 
+## (dans un tableau de sous-documents appelé contacts) : 
+## On remplace le sous-document par un autre objet
+## Le document à modifier resemble dans l'exemple à :
+## {
+## 	_id: x,
+## 	name: aa11bb22cc33y,
+## 	contacts: [
+##     {
+##       _id: y,
+##       name: 'zz11xx22yy33',
+##       email: 'zz11xx22yy33@mail.fr'
+##     }
+##   ]
+## }
+
+db.abonnes.update({ _id: x, "contacts._id": y }, { $set: { "contacts.$":myNewDocument } })
+
+## Pour effacer un champ
+db.abonnes.update({ _id: x }, { $unset: { contacts: "" } })
+
+## Pour renommer un champ
+db.abonnes.update({}, { $rename: { "ancien_nom": "nouveau_nom" } }, { multi: true })
+
+## Pour effacer un champ de tous les document d'une collection
+## (En SGBD-R : cela correspond à un ALTER TABLE abonnes DROP COLUMN chaines_sport )
+db.abonnes.update({}, { $unset: { chaines_sport: "" } }, { multi: true } )
+
+## Pour retirer un élément d'un tableau :
+## On retire l'avantage "yyy" du tableau "remises" de l'utilisateur "xxx")
+db.abonnes.update({ _id: xxx }, { $pull: { remises: yyy } })
+
+## Pour on fait la même chose, mais on retire cet avantage de tous les utilisateurs
+## Par exemple, l'avantage yyy n'est plus valide, car périmé : 
+db.abonnes.update({ remises: yyy }, { $pull: { remises: yyy } }, { multi: true })
+
+## Pour effacer un document
+db.contacts.remove({ _id: ObjectId("55accc6c039c97c5db42f192") })
+
+## Pour effacer tous les documents d'une collection
+db.contacts.remove({})
+
+## Pour effacer un sous-document d'id y du doc d'id x (dans un tableau de sous-documents)
+db.abonnes.update({ _id: x }, { $pull: { contacts: { _id: y } } })
+
+## $pop permet d'enlever le dernier ou le premier élément d'un tableau
+## respectivement en lui passant les valeurs 1 et -1
+db.abonnes.update({ _id: x }, { $pop: { contacts: -1 } })
+
+
+## La console Mongo est aussi un shell "JavaScript" : 
+## Pour éviter de saisir à chaque fois db.abonnes.commande,
+## on enregistre la partie fixe dans une variable :
+
+## La collection est stockée dans une variable :
+t = db.abonnes
+
+## Et la prochaine commande est simplifiée : 
+t.find().pretty()

@@ -1,0 +1,175 @@
+﻿################################################################################################################
+## Manipulation de documents 
+################################################################################################################
+## Rappels et notions : 
+################################################################################################################
+## 
+## Mongodb est un SGBD orienté documents, et non relationnel.
+## Comparaison entre Bases orientées document et les Bases Relationnelles : 
+## On parle de :
+## - Collections 	au lieu de 	tables
+## - Documents 		au lieu d'	enregistrements 
+##
+## JSON (JavaScript Object Notation) : 
+## - format d'échange populaire sur le web, comme XML. 
+## - format de données simple, lisible et peu verbeux. 
+## - notation dérivée du langage JavaScript.
+## 
+## BSON (binary JSON): version binaire étendue de JSON 
+## (sérialisation binaire de documents « JSON-Like ») 
+## avec une extension pour d’autres types (date, données binaires, etc.)
+## Pour apprfondir les spécification de BSON: http://bsonspec.org/
+##
+## Le BSON est le format utilisé par MongoDB.
+## 
+################################################################################################################
+## Un document peut être vu comme un ensemble de couples clef / valeur.
+## 
+## Exemple simple :
+## { 'prenom': 'Stephane', 'nom': 'Alleaume' }
+## { 'prenom': '1form@' }
+## { 'code': 'Mongodb', 'intitulé': 'Formation MongoDB', }
+## 
+##
+################################################################################################################
+## ObjectID: identifiant unique de chaque document : 
+## 
+## 			- Déclaré explicitement par le développeur
+## 		ou
+##  		- implicitement par mongoDB
+## 
+## Exemple :
+## {
+## 	"_id" : 1,
+## 	"name" : { "first" : "John", "last" : "Backus" },
+## 	"contribs" : [ "Fortran", "ALGOL", "Backus-Naur Form", "FP" ],
+## 	"awards" : [
+## 	{
+## 		"award" : "W.W. McDowell Award",
+## 		"year" : 1967,
+## 		"by" : "IEEE Computer Society"
+## 	},
+## 		{ "award" : "Draper Prize",
+## 			"year" : 1993,
+## 			"by" : "National Academy of Engineering"
+## 		}
+## 	]
+## }
+## 
+################################################################################################################
+
+################################################################################################################
+## Ouvrir un shell mongo pointant sur une instance mongodb déjà lancée : 
+mongosh --host 192.168.1.141:27017
+
+
+
+############################################################################################
+## Exemple 1 :
+############################################################################################
+## Création d’une base :
+use db_employes
+
+## Création d’une collection et Insertion d'un document :
+db.db_employes.insertOne
+	(
+		{
+			"Employe_id" : 1,
+			"Employe_Nom" : "Durant"
+		}
+	);
+
+############################################################################################
+## Exemple 2 :
+############################################################################################
+## Création d’une base :
+use ma_DB
+
+## Création d’une collection et Insertion d'un document :
+db["ma_Collection"].insertOne({"test2":1});
+db.ma_Collection.insertOne({"test2":3});
+
+
+## Recherche d'un document :
+db["ma_Collection"].find();
+## { "_id" : ObjectId("5b05d94f3f9b1b7a70e9a87d"), "test2" : 1 }
+
+## Recherche d'une collection :
+db.getCollection("ma_Collection").find()
+## { "_id" : ObjectId("5b05d94f3f9b1b7a70e9a87d"), "test2" : 1 }
+
+############################################################################################
+## Exemple 3 :
+############################################################################################
+## Création (ou utilisation) d’une base :
+use ma_DB;
+
+## Création d’une collection :
+db.createCollection("utilisateurs");
+
+## Remarque, si elle existe déjà : 
+## {
+## 	"ok" : 0,
+## 	"errmsg" : "a collection 'utilisateurs' already exists",
+## 	"code" : 48,
+## 	"codeName" : "NamespaceExists"
+## 
+
+## Remarque : en environnement sécurisé, se connecter avec un user autorisé : db.auth("user1", "login")
+
+## Insertion d'un document :
+db.utilisateurs.insert({"_id":"5aee82f9413a0d32247a7fe2","name":"OSS 117","login":"Hubert","age":"50","adresse":{"rue":"42 Champs Elysees","ville":"Paris"}});
+## WriteResult({ "nInserted" : 1 })
+
+## Requêtes orientées documents :
+db.utilisateurs.find( { 'login' : "Hubert" } );
+
+db.utilisateurs.find({ 'adresse.ville': 'Paris' }, {name : 1});
+
+db.utilisateurs.find( { 'age' : { $gt : 40 } } );
+## Pas de retour 
+
+### Suppression et insertion du document avec l'âge stocké en numérique cette fois : 
+db.utilisateurs.drop()
+db.utilisateurs.insert({"_id":"5aee82f9413a0d32247a7fe2","name":"OSS 117","login":"Hubert","age":50,"adresse":{"rue":"42 Champs Elysees","ville":"Paris"}});
+
+db.utilisateurs.find( { 'age' : { $gt : 40 } } );
+## Et là, cela fonctionne ...
+
+## On en rajoute un 2nd pour la suite : 
+db.utilisateurs.insert({"_id":"5ade82f9413a5d32247a7111","name":"OSS 122","login":"Cousin","age":45,"adresse":{"rue":"32 chemin des Champs","ville":"Toulouse"}});
+
+# Autre options : $gt, $gte, $lt, $lte, $ne, $in, $nin, $or, $and, $exists, $type …
+# Ici $regex permet de recherche un pattern, avec des options : (par exemple : "i" : insensible à la casse)
+db.utilisateurs.find( { name : { $regex : "OSS", $options : "i" } } );
+db.utilisateurs.find( { name : { $regex : "OSS 12", $options : "i" } } );
+db.utilisateurs.count();
+
+
+## Valeurs distinctes :
+db.utilisateurs.distinct("adresse.ville")
+
+## Aggrégats
+db.utilisateurs.aggregate([{$sort : {age : 1}} ]);
+db.utilisateurs.aggregate([{$project : {login : 1, name : 1}} ]);
+db.utilisateurs.aggregate([{$match : {'adresse.ville' : 'Paris'}}, {$sort : {age : 1}} ]);
+db.utilisateurs.aggregate([{$group : {_id:'$adresse.ville', number : {$sum : 1}}}, {$sort : {number : 1}} ]);
+
+## Séparer les instances d'un tableau :
+db.utilisateurs.aggregate([{$unwind : "$array"}]);
+
+## Mise à jour :
+## - Pas de transactions multi-documents (disponible depuis V4.2)
+## - Modifications atomiques de documents
+$set 		Modifie une valeur
+$unset 		Supprime un attribut
+$inc 		Incrément
+$push 		Ajout dans un tableau
+$pushAll	Plusieurs valeurs dans un tableau
+$pull		Supprimer une valeur de tableau
+$pullAll	Supprimer plusieurs valeurs
+
+## Rq : requête à adapter si valeur différente du "_id" :
+db.utilisateurs.update( { "_id" : "5ade82f9413a5d32247a7111" } , { "$inc" : { "age" : 1 }} )
+## WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+
